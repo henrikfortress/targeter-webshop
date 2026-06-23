@@ -122,6 +122,7 @@ export async function submitOrder(input: SubmitOrderInput) {
     console.log('[ORDER SUBMITTED]', JSON.stringify(orderPayload, null, 2));
 
     revalidatePath('/');
+    revalidatePath('/orders');
 
     return { success: true, orderId };
 }

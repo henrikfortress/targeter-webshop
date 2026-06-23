@@ -31,7 +31,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.next();
     }
 
-    if (pathname === '/') {
+    if (pathname === '/' || pathname === '/orders') {
         if (!session) {
             return NextResponse.redirect(new URL(loginPath, request.url));
         }
@@ -43,5 +43,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/login', '/admin/:path*'],
+    matcher: ['/', '/orders', '/login', '/admin/:path*'],
 };

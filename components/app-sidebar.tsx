@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HomeIcon, PackageIcon, PrinterIcon, UsersIcon } from 'lucide-react';
+import { ClipboardListIcon, HomeIcon, PackageIcon, PrinterIcon, UsersIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/sign-out-button';
 import {
     Sidebar,
@@ -50,6 +50,18 @@ export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
                                     <Link href="/">
                                         <HomeIcon />
                                         <span>Hjem</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={pathname === '/orders'}
+                                    tooltip="Bestillingshistorikk"
+                                >
+                                    <Link href="/orders">
+                                        <ClipboardListIcon />
+                                        <span>Bestillinger</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
