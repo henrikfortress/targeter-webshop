@@ -31,9 +31,15 @@ export function DeleteProductDialog({ product, open, onOpenChange, onSuccess }: 
         setIsLoading(true);
         setError(null);
 
-        await deleteProduct(product.id);
+        const result = await deleteProduct(product.id);
 
         setIsLoading(false);
+
+        if (result.error) {
+            setError(result.error);
+            return;
+        }
+
         onOpenChange(false);
         onSuccess();
     }

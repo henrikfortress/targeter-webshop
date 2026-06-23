@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/actions/auth';
 import { db } from '@/lib/db';
-import { product, productSize } from '@/lib/db/schema';
+import { orderItem, product, productSize } from '@/lib/db/schema';
 
 export type ProductSizeInput = {
     id?: string;
@@ -113,6 +113,17 @@ export async function updateProduct(productId: string, input: ProductInput) {
 
 export async function deleteProduct(productId: string) {
     await requireAdminSession();
+
+    const referencedInOrder = await db.query.orderItem.findFirst({
+        where: eq(orderItem.productId, productId),
+        columns: { id: true },
+    });
+
+    if (referencedInOrder) {
+        return {
+            error: 'Produktet kan ikke slettes fordi det finnes i bestillinger. Deaktiver produktet i stedet.',
+        };
+    }
 
     await db.delete(product).where(eq(product.id, productId));
 
