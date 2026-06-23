@@ -1,9 +1,10 @@
 import { ProductsTable } from '@/components/admin/products-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAllProducts } from '@/lib/queries/products';
+import { getAllPrintShops } from '@/lib/queries/print-shops';
 
 export default async function AdminProductsPage() {
-    const products = await getAllProducts();
+    const [products, printShops] = await Promise.all([getAllProducts(), getAllPrintShops()]);
 
     return (
         <>
@@ -17,7 +18,7 @@ export default async function AdminProductsPage() {
                     <CardDescription>Produkter som vises på forsiden når de er aktive.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ProductsTable products={products} />
+                    <ProductsTable products={products} printShops={printShops} />
                 </CardContent>
             </Card>
         </>

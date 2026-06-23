@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, timestamp, boolean, index, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, index, integer, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
     id: text('id').primaryKey(),
@@ -117,9 +117,27 @@ export const productSize = pgTable(
             .notNull()
             .references(() => product.id, { onDelete: 'cascade' }),
         size: text('size').notNull(),
-        stock: integer('stock').default(0).notNull(),
     },
     (table) => [index('product_size_productId_idx').on(table.productId)],
+);
+
+export const productSizeStock = pgTable(
+    'product_size_stock',
+    {
+        id: text('id').primaryKey(),
+        productSizeId: text('product_size_id')
+            .notNull()
+            .references(() => productSize.id, { onDelete: 'cascade' }),
+        printShopId: text('print_shop_id')
+            .notNull()
+            .references(() => printShop.id, { onDelete: 'cascade' }),
+        stock: integer('stock').default(0).notNull(),
+    },
+    (table) => [
+        index('product_size_stock_productSizeId_idx').on(table.productSizeId),
+        index('product_size_stock_printShopId_idx').on(table.printShopId),
+        uniqueIndex('product_size_stock_size_shop_uidx').on(table.productSizeId, table.printShopId),
+    ],
 );
 
 export const printShop = pgTable('print_shop', {
@@ -171,15 +189,28 @@ export const productRelations = relations(product, ({ many }) => ({
     sizes: many(productSize),
 }));
 
-export const productSizeRelations = relations(productSize, ({ one }) => ({
+export const productSizeRelations = relations(productSize, ({ one, many }) => ({
     product: one(product, {
         fields: [productSize.productId],
         references: [product.id],
+    }),
+    stocks: many(productSizeStock),
+}));
+
+export const productSizeStockRelations = relations(productSizeStock, ({ one }) => ({
+    productSize: one(productSize, {
+        fields: [productSizeStock.productSizeId],
+        references: [productSize.id],
+    }),
+    printShop: one(printShop, {
+        fields: [productSizeStock.printShopId],
+        references: [printShop.id],
     }),
 }));
 
 export const printShopRelations = relations(printShop, ({ many }) => ({
     orderItems: many(orderItem),
+    productSizeStocks: many(productSizeStock),
 }));
 
 export const orderRelations = relations(order, ({ one, many }) => ({

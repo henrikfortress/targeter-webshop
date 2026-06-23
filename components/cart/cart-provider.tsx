@@ -10,6 +10,7 @@ export type CartItem = {
     quantity: number;
     maxStock: number;
     printShopId: string;
+    stocksByShop: Record<string, number>;
 };
 
 type CartContextValue = {
@@ -69,7 +70,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                         ? {
                               ...entry,
                               quantity: nextQuantity,
-                              maxStock: item.maxStock,
+                              maxStock: item.stocksByShop[item.printShopId] ?? item.maxStock,
+                              stocksByShop: item.stocksByShop,
                               printShopId: item.printShopId,
                           }
                         : entry,
@@ -86,6 +88,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     quantity: Math.min(item.maxStock, quantity),
                     maxStock: item.maxStock,
                     printShopId: item.printShopId,
+                    stocksByShop: item.stocksByShop,
                 },
             ];
         });
@@ -105,7 +108,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const updatePrintShop = useCallback((productSizeId: string, printShopId: string) => {
         setItems((current) =>
-            current.map((entry) => (entry.productSizeId === productSizeId ? { ...entry, printShopId } : entry)),
+            current.map((entry) => {
+                if (entry.productSizeId !== productSizeId) return entry;
+
+                const maxStock = entry.stocksByShop[printShopId] ?? 0;
+
+                return {
+                    ...entry,
+                    printShopId,
+                    maxStock,
+                    quantity: Math.min(entry.quantity, maxStock),
+                };
+            }),
         );
     }, []);
 

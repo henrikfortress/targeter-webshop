@@ -4,12 +4,17 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireAdminSession } from '@/lib/actions/auth';
 import { db } from '@/lib/db';
-import { orderItem, product, productSize } from '@/lib/db/schema';
+import { orderItem, product, productSize, productSizeStock } from '@/lib/db/schema';
+
+export type ProductSizeStockInput = {
+    printShopId: string;
+    stock: number;
+};
 
 export type ProductSizeInput = {
     id?: string;
     size: string;
-    stock: number;
+    stocks: ProductSizeStockInput[];
 };
 
 export type ProductInput = {
@@ -22,6 +27,38 @@ export type ProductInput = {
 function revalidateProductPaths() {
     revalidatePath('/');
     revalidatePath('/admin/products');
+}
+
+async function upsertSizeStocks(productSizeId: string, stocks: ProductSizeStockInput[]) {
+    const existingStocks = await db.query.productSizeStock.findMany({
+        where: eq(productSizeStock.productSizeId, productSizeId),
+    });
+
+    const incomingShopIds = new Set(stocks.map((entry) => entry.printShopId));
+
+    for (const entry of existingStocks) {
+        if (!incomingShopIds.has(entry.printShopId)) {
+            await db.delete(productSizeStock).where(eq(productSizeStock.id, entry.id));
+        }
+    }
+
+    for (const entry of stocks) {
+        const existing = existingStocks.find((stock) => stock.printShopId === entry.printShopId);
+
+        if (existing) {
+            await db
+                .update(productSizeStock)
+                .set({ stock: Math.max(0, entry.stock) })
+                .where(eq(productSizeStock.id, existing.id));
+        } else {
+            await db.insert(productSizeStock).values({
+                id: crypto.randomUUID(),
+                productSizeId,
+                printShopId: entry.printShopId,
+                stock: Math.max(0, entry.stock),
+            });
+        }
+    }
 }
 
 export async function createProduct(input: ProductInput) {
@@ -44,14 +81,17 @@ export async function createProduct(input: ProductInput) {
         active: input.active,
     });
 
-    await db.insert(productSize).values(
-        input.sizes.map((size) => ({
-            id: crypto.randomUUID(),
+    for (const size of input.sizes) {
+        const sizeId = crypto.randomUUID();
+
+        await db.insert(productSize).values({
+            id: sizeId,
             productId,
             size: size.size.trim(),
-            stock: Math.max(0, size.stock),
-        })),
-    );
+        });
+
+        await upsertSizeStocks(sizeId, size.stocks);
+    }
 
     revalidateProductPaths();
     return { success: true };
@@ -94,16 +134,20 @@ export async function updateProduct(productId: string, input: ProductInput) {
                 .update(productSize)
                 .set({
                     size: size.size.trim(),
-                    stock: Math.max(0, size.stock),
                 })
                 .where(eq(productSize.id, size.id));
+
+            await upsertSizeStocks(size.id, size.stocks);
         } else {
+            const sizeId = crypto.randomUUID();
+
             await db.insert(productSize).values({
-                id: crypto.randomUUID(),
+                id: sizeId,
                 productId,
                 size: size.size.trim(),
-                stock: Math.max(0, size.stock),
             });
+
+            await upsertSizeStocks(sizeId, size.stocks);
         }
     }
 

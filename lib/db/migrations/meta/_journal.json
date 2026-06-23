@@ -29,6 +29,13 @@
             "when": 1782214387586,
             "tag": "0003_print_shop_email",
             "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1782214387587,
+            "tag": "0004_stock_per_print_shop",
+            "breakpoints": true
         }
     ]
 }

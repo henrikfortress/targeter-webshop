@@ -8,13 +8,16 @@ import { ProductDialog } from '@/components/admin/product-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { PrintShopRecord } from '@/lib/queries/print-shops';
 import type { ProductWithSizes } from '@/lib/queries/products';
+import { getTotalStock } from '@/lib/product-stock';
 
 type ProductsTableProps = {
     products: ProductWithSizes[];
+    printShops: PrintShopRecord[];
 };
 
-export function ProductsTable({ products: initialProducts }: ProductsTableProps) {
+export function ProductsTable({ products: initialProducts, printShops }: ProductsTableProps) {
     const router = useRouter();
     const [products, setProducts] = useState(initialProducts);
     const [createOpen, setCreateOpen] = useState(false);
@@ -67,7 +70,7 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                                         <div className="flex flex-wrap gap-1">
                                             {product.sizes.map((size) => (
                                                 <Badge key={size.id} variant="outline">
-                                                    {size.size}: {size.stock}
+                                                    {size.size}: {getTotalStock(size.stocks)}
                                                 </Badge>
                                             ))}
                                         </div>
@@ -106,7 +109,12 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                 </Table>
             </div>
 
-            <ProductDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={reloadProducts} />
+            <ProductDialog
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+                onSuccess={reloadProducts}
+                printShops={printShops}
+            />
             <ProductDialog
                 product={editingProduct}
                 open={editingProduct !== null}
@@ -114,6 +122,7 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                     if (!open) setEditingProduct(null);
                 }}
                 onSuccess={reloadProducts}
+                printShops={printShops}
             />
             <DeleteProductDialog
                 product={deletingProduct}

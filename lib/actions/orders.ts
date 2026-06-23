@@ -1,10 +1,10 @@
 'use server';
 
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/actions/auth';
 import { db } from '@/lib/db';
-import { order, orderItem, printShop, productSize } from '@/lib/db/schema';
+import { order, orderItem, printShop, productSize, productSizeStock } from '@/lib/db/schema';
 
 export type OrderItemInput = {
     productId: string;
@@ -46,7 +46,7 @@ export async function submitOrder(input: SubmitOrderInput) {
     const sizeIds = input.items.map((item) => item.productSizeId);
     const sizes = await db.query.productSize.findMany({
         where: inArray(productSize.id, sizeIds),
-        with: { product: true },
+        with: { product: true, stocks: true },
     });
 
     const sizeMap = new Map(sizes.map((size) => [size.id, size]));
@@ -62,9 +62,13 @@ export async function submitOrder(input: SubmitOrderInput) {
             return { error: 'Ugyldig antall' };
         }
 
-        if (item.quantity > sizeRecord.stock) {
+        const stockRecord = sizeRecord.stocks.find((entry) => entry.printShopId === item.printShopId);
+        const availableStock = stockRecord?.stock ?? 0;
+
+        if (item.quantity > availableStock) {
+            const shopName = shopMap.get(item.printShopId)?.name ?? 'valgt trykkeri';
             return {
-                error: `Ikke nok på lager for ${item.productName} (${item.size}). Tilgjengelig: ${sizeRecord.stock}`,
+                error: `Ikke nok på lager for ${item.productName} (${item.size}) hos ${shopName}. Tilgjengelig: ${availableStock}`,
             };
         }
     }
@@ -89,10 +93,17 @@ export async function submitOrder(input: SubmitOrderInput) {
 
     for (const item of input.items) {
         const sizeRecord = sizeMap.get(item.productSizeId)!;
+        const stockRecord = sizeRecord.stocks.find((entry) => entry.printShopId === item.printShopId)!;
+
         await db
-            .update(productSize)
-            .set({ stock: sizeRecord.stock - item.quantity })
-            .where(eq(productSize.id, item.productSizeId));
+            .update(productSizeStock)
+            .set({ stock: stockRecord.stock - item.quantity })
+            .where(
+                and(
+                    eq(productSizeStock.productSizeId, item.productSizeId),
+                    eq(productSizeStock.printShopId, item.printShopId),
+                ),
+            );
     }
 
     const orderPayload = {

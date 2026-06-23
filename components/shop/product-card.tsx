@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertCircleIcon, CheckIcon, ShoppingCartIcon } from 'lucide-react';
 import { useCart } from '@/components/cart/cart-provider';
 import type { PrintShopRecord } from '@/lib/queries/print-shops';
+import { getStockForShop } from '@/lib/product-stock';
 import type { ProductWithSizes } from '@/lib/queries/products';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,12 +20,23 @@ type ProductCardProps = {
 
 export function ProductCard({ product, printShops }: ProductCardProps) {
     const { addItem } = useCart();
-    const availableSizes = product.sizes.filter((size) => size.stock > 0);
-    const [selectedSizeId, setSelectedSizeId] = useState(availableSizes[0]?.id ?? '');
     const [printShopId, setPrintShopId] = useState(printShops[0]?.id ?? '');
+
+    const availableSizes = useMemo(
+        () => product.sizes.filter((size) => getStockForShop(size.stocks, printShopId) > 0),
+        [product.sizes, printShopId],
+    );
+
+    const [selectedSizeId, setSelectedSizeId] = useState(availableSizes[0]?.id ?? '');
     const [quantity, setQuantity] = useState(1);
     const [feedback, setFeedback] = useState<'idle' | 'added' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
+
+    useEffect(() => {
+        if (availableSizes.some((size) => size.id === selectedSizeId)) return;
+        setSelectedSizeId(availableSizes[0]?.id ?? '');
+        setQuantity(1);
+    }, [availableSizes, selectedSizeId]);
 
     useEffect(() => {
         if (feedback === 'idle') return;
@@ -34,10 +46,12 @@ export function ProductCard({ product, printShops }: ProductCardProps) {
     }, [feedback]);
 
     const selectedSize = product.sizes.find((size) => size.id === selectedSizeId);
-    const totalStock = product.sizes.reduce((sum, size) => sum + size.stock, 0);
+    const selectedStock = selectedSize ? getStockForShop(selectedSize.stocks, printShopId) : 0;
+    const totalStock = product.sizes.reduce((sum, size) => sum + getStockForShop(size.stocks, printShopId), 0);
+    const selectedShop = printShops.find((shop) => shop.id === printShopId);
 
     function handleAddToCart() {
-        if (!selectedSize || selectedSize.stock <= 0) {
+        if (!selectedSize || selectedStock <= 0) {
             setErrorMessage('Velg en størrelse med lager');
             setFeedback('error');
             return;
@@ -54,7 +68,8 @@ export function ProductCard({ product, printShops }: ProductCardProps) {
             productSizeId: selectedSize.id,
             productName: product.name,
             size: selectedSize.size,
-            maxStock: selectedSize.stock,
+            maxStock: selectedStock,
+            stocksByShop: Object.fromEntries(selectedSize.stocks.map((entry) => [entry.printShopId, entry.stock])),
             printShopId,
             quantity,
         });
@@ -74,17 +89,46 @@ export function ProductCard({ product, printShops }: ProductCardProps) {
                         ) : null}
                     </div>
                     <Badge variant={totalStock > 0 ? 'outline' : 'destructive'}>
-                        {totalStock > 0 ? `${totalStock} på lager` : 'Utsolgt'}
+                        {selectedShop
+                            ? totalStock > 0
+                                ? `${totalStock} på lager hos ${selectedShop.name}`
+                                : `Utsolgt hos ${selectedShop.name}`
+                            : totalStock > 0
+                              ? `${totalStock} på lager`
+                              : 'Utsolgt'}
                     </Badge>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
+                {printShops.length > 0 ? (
+                    <div className="space-y-2">
+                        <Label htmlFor={`print-shop-${product.id}`}>Trykkeri</Label>
+                        <Select value={printShopId} onValueChange={setPrintShopId}>
+                            <SelectTrigger id={`print-shop-${product.id}`}>
+                                <SelectValue placeholder="Velg trykkeri" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {printShops.map((shop) => (
+                                    <SelectItem key={shop.id} value={shop.id}>
+                                        {shop.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">Ingen trykkeri tilgjengelig.</p>
+                )}
                 <div className="flex flex-wrap gap-2">
-                    {product.sizes.map((size) => (
-                        <Badge key={size.id} variant={size.stock > 0 ? 'secondary' : 'outline'}>
-                            {size.size}: {size.stock}
-                        </Badge>
-                    ))}
+                    {product.sizes.map((size) => {
+                        const stock = getStockForShop(size.stocks, printShopId);
+
+                        return (
+                            <Badge key={size.id} variant={stock > 0 ? 'secondary' : 'outline'}>
+                                {size.size}: {stock}
+                            </Badge>
+                        );
+                    })}
                 </div>
                 {availableSizes.length > 0 ? (
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -97,7 +141,7 @@ export function ProductCard({ product, printShops }: ProductCardProps) {
                                 <SelectContent>
                                     {availableSizes.map((size) => (
                                         <SelectItem key={size.id} value={size.id}>
-                                            {size.size} ({size.stock} igjen)
+                                            {size.size} ({getStockForShop(size.stocks, printShopId)} igjen)
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -109,33 +153,18 @@ export function ProductCard({ product, printShops }: ProductCardProps) {
                                 id={`quantity-${product.id}`}
                                 type="number"
                                 min={1}
-                                max={selectedSize?.stock ?? 1}
+                                max={selectedStock || 1}
                                 value={quantity}
                                 onChange={(event) => setQuantity(Number(event.target.value) || 1)}
                             />
                         </div>
-                        <div className="space-y-2 sm:col-span-2">
-                            <Label htmlFor={`print-shop-${product.id}`}>Trykkeri</Label>
-                            {printShops.length > 0 ? (
-                                <Select value={printShopId} onValueChange={setPrintShopId}>
-                                    <SelectTrigger id={`print-shop-${product.id}`}>
-                                        <SelectValue placeholder="Velg trykkeri" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {printShops.map((shop) => (
-                                            <SelectItem key={shop.id} value={shop.id}>
-                                                {shop.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">Ingen trykkeri tilgjengelig.</p>
-                            )}
-                        </div>
                     </div>
                 ) : (
-                    <p className="text-sm text-muted-foreground">Produktet er midlertidig utsolgt.</p>
+                    <p className="text-sm text-muted-foreground">
+                        {selectedShop
+                            ? `Produktet er midlertidig utsolgt hos ${selectedShop.name}.`
+                            : 'Produktet er midlertidig utsolgt.'}
+                    </p>
                 )}
             </CardContent>
             {availableSizes.length > 0 && printShops.length > 0 ? (
