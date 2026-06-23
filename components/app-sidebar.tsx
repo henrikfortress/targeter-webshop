@@ -36,7 +36,9 @@ export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
     return (
         <Sidebar collapsible="none" className="h-svh shrink-0">
             <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
-                <p className="text-sm font-semibold">Targeter Webshop</p>
+                <Link href="/" className="block w-fit">
+                    <img src="/targeter.svg" alt="Targeter" className="h-6 w-auto" />
+                </Link>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
