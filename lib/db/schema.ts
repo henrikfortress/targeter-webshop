@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, text, timestamp, boolean, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, boolean, index, integer } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
     id: text('id').primaryKey(),
@@ -94,5 +94,117 @@ export const accountRelations = relations(account, ({ one }) => ({
     user: one(user, {
         fields: [account.userId],
         references: [user.id],
+    }),
+}));
+
+export const product = pgTable('product', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    active: boolean('active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+        .defaultNow()
+        .$onUpdate(() => new Date())
+        .notNull(),
+});
+
+export const productSize = pgTable(
+    'product_size',
+    {
+        id: text('id').primaryKey(),
+        productId: text('product_id')
+            .notNull()
+            .references(() => product.id, { onDelete: 'cascade' }),
+        size: text('size').notNull(),
+        stock: integer('stock').default(0).notNull(),
+    },
+    (table) => [index('product_size_productId_idx').on(table.productId)],
+);
+
+export const printShop = pgTable('print_shop', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    active: boolean('active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+        .defaultNow()
+        .$onUpdate(() => new Date())
+        .notNull(),
+});
+
+export const order = pgTable(
+    'order',
+    {
+        id: text('id').primaryKey(),
+        userId: text('user_id')
+            .notNull()
+            .references(() => user.id),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+    },
+    (table) => [index('order_userId_idx').on(table.userId)],
+);
+
+export const orderItem = pgTable(
+    'order_item',
+    {
+        id: text('id').primaryKey(),
+        orderId: text('order_id')
+            .notNull()
+            .references(() => order.id, { onDelete: 'cascade' }),
+        productId: text('product_id')
+            .notNull()
+            .references(() => product.id),
+        productSizeId: text('product_size_id')
+            .notNull()
+            .references(() => productSize.id),
+        printShopId: text('print_shop_id')
+            .notNull()
+            .references(() => printShop.id),
+        quantity: integer('quantity').notNull(),
+    },
+    (table) => [index('order_item_orderId_idx').on(table.orderId)],
+);
+
+export const productRelations = relations(product, ({ many }) => ({
+    sizes: many(productSize),
+}));
+
+export const productSizeRelations = relations(productSize, ({ one }) => ({
+    product: one(product, {
+        fields: [productSize.productId],
+        references: [product.id],
+    }),
+}));
+
+export const printShopRelations = relations(printShop, ({ many }) => ({
+    orderItems: many(orderItem),
+}));
+
+export const orderRelations = relations(order, ({ one, many }) => ({
+    user: one(user, {
+        fields: [order.userId],
+        references: [user.id],
+    }),
+    items: many(orderItem),
+}));
+
+export const orderItemRelations = relations(orderItem, ({ one }) => ({
+    order: one(order, {
+        fields: [orderItem.orderId],
+        references: [order.id],
+    }),
+    product: one(product, {
+        fields: [orderItem.productId],
+        references: [product.id],
+    }),
+    productSize: one(productSize, {
+        fields: [orderItem.productSizeId],
+        references: [productSize.id],
+    }),
+    printShop: one(printShop, {
+        fields: [orderItem.printShopId],
+        references: [printShop.id],
     }),
 }));

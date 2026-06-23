@@ -1,13 +1,34 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1782203453395,
-      "tag": "0000_swift_mephistopheles",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1782203453395,
+            "tag": "0000_swift_mephistopheles",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1782203453396,
+            "tag": "0001_products_orders",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1782203453397,
+            "tag": "0002_print_shop_per_order_item",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1782214387586,
+            "tag": "0003_print_shop_email",
+            "breakpoints": true
+        }
+    ]
 }

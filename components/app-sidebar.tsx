@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { HomeIcon, UsersIcon } from 'lucide-react';
+import { HomeIcon, PackageIcon, PrinterIcon, UsersIcon } from 'lucide-react';
 import { SignOutButton } from '@/components/sign-out-button';
 import {
     Sidebar,
@@ -25,13 +25,14 @@ type AppSidebarProps = {
     isAdmin: boolean;
 };
 
+const adminLinks = [
+    { title: 'Brukere', href: '/admin/users', icon: UsersIcon },
+    { title: 'Produkter', href: '/admin/products', icon: PackageIcon },
+    { title: 'Trykkeri', href: '/admin/fulfillment', icon: PrinterIcon },
+] as const;
+
 export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
     const pathname = usePathname();
-
-    const navItems = [
-        { title: 'Hjem', href: '/', icon: HomeIcon },
-        ...(isAdmin ? [{ title: 'Admin', href: '/admin', icon: UsersIcon }] : []),
-    ];
 
     return (
         <Sidebar collapsible="none" className="h-svh shrink-0">
@@ -42,22 +43,42 @@ export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
             </SidebarHeader>
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>Navigasjon</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {navItems.map((item) => (
-                                <SidebarMenuItem key={item.href}>
-                                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.title}>
-                                        <Link href={item.href}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Hjem">
+                                    <Link href="/">
+                                        <HomeIcon />
+                                        <span>Hjem</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                {isAdmin ? (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Admin</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {adminLinks.map((item) => (
+                                    <SidebarMenuItem key={item.href}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={pathname === item.href}
+                                            tooltip={item.title}
+                                        >
+                                            <Link href={item.href}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ) : null}
             </SidebarContent>
             <SidebarFooter className="border-t border-sidebar-border p-4">
                 <div className="flex flex-col gap-3">

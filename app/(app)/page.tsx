@@ -1,25 +1,19 @@
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth';
+import { ProductCatalog } from '@/components/shop/product-catalog';
+import { getActivePrintShops } from '@/lib/queries/print-shops';
+import { getActiveProducts } from '@/lib/queries/products';
 
 export default async function Home() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    });
-
-    const user = session?.user;
+    const [products, printShops] = await Promise.all([getActiveProducts(), getActivePrintShops()]);
 
     return (
         <>
             <div>
-                <h1 className="text-2xl font-semibold">Hjem</h1>
-                <p className="text-sm text-muted-foreground">Velkommen til Targeter Webshop.</p>
-            </div>
-            {user?.name || user?.email ? (
+                <h1 className="text-2xl font-semibold">Produkter</h1>
                 <p className="text-sm text-muted-foreground">
-                    Du er logget inn som {user.email}
-                    {user.name ? ` (${user.name})` : ''}.
+                    Velg størrelse, trykkeri og legg produkter i bestillingen din.
                 </p>
-            ) : null}
+            </div>
+            <ProductCatalog products={products} printShops={printShops} />
         </>
     );
 }
