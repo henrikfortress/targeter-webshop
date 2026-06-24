@@ -34,12 +34,20 @@ async function main() {
         process.exit(1);
     }
 
+    let userRole: 'user' | 'admin' | undefined;
+    if (role) {
+        if (role !== 'user' && role !== 'admin') {
+            throw new Error(`Invalid role "${role}". Must be "user" or "admin".`);
+        }
+        userRole = role;
+    }
+
     const result = await auth.api.createUser({
         body: {
             email,
             password,
             name: name ?? email.split('@')[0] ?? email,
-            ...(role ? { role } : {}),
+            ...(userRole ? { role: userRole } : {}),
         },
     });
 
