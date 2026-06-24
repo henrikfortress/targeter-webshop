@@ -1,8 +1,11 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
-import { hasAdminRole } from '@/lib/auth-utils';
+import { hasAdminRole, hasPrintShopRole } from '@/lib/auth-utils';
+import { db } from '@/lib/db';
+import { user } from '@/lib/db/schema';
 
 export async function requireSession() {
     const session = await auth.api.getSession({
@@ -24,4 +27,23 @@ export async function requireAdminSession() {
     }
 
     return session;
+}
+
+export async function requirePrintShopSession() {
+    const session = await requireSession();
+
+    if (!hasPrintShopRole(session.user.role)) {
+        throw new Error('Ikke autorisert');
+    }
+
+    const dbUser = await db.query.user.findFirst({
+        where: eq(user.id, session.user.id),
+        columns: { printShopId: true },
+    });
+
+    if (!dbUser?.printShopId) {
+        throw new Error('Ikke autorisert');
+    }
+
+    return { session, printShopId: dbUser.printShopId };
 }

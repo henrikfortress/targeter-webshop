@@ -10,25 +10,10 @@ export const FULFILLMENT_STATUSES = [
 
 export type FulfillmentStatus = (typeof FULFILLMENT_STATUSES)[number];
 
-export const STATUS_KEYWORDS: Record<string, FulfillmentStatus> = {
-    CONFIRMED: 'confirmed',
-    CONFIRM: 'confirmed',
-    BEKREFTET: 'confirmed',
-    IN_PRODUCTION: 'in_production',
-    PRODUCTION: 'in_production',
-    PRODUKSJON: 'in_production',
-    SHIPPED: 'shipped',
-    SENDT: 'shipped',
-    DELIVERED: 'delivered',
-    DELIVER: 'delivered',
-    LEVERT: 'delivered',
-    CANCELLED: 'cancelled',
-    CANCELED: 'cancelled',
-    AVBRUTT: 'cancelled',
-    KANSELLERT: 'cancelled',
-};
-
 export const FULFILLMENT_REF_PREFIX = 'FULFILLMENT:';
+
+const CANCELLABLE_STATUSES = ['pending', 'sent', 'confirmed'] as const satisfies readonly FulfillmentStatus[];
+const TERMINAL_STATUSES = ['delivered', 'cancelled'] as const satisfies readonly FulfillmentStatus[];
 
 export function buildFulfillmentRef(fulfillmentId: string) {
     return `${FULFILLMENT_REF_PREFIX}${fulfillmentId}`;
@@ -39,23 +24,31 @@ export function parseFulfillmentRef(text: string): string | null {
     return match?.[1] ?? null;
 }
 
-export function parseStatusKeyword(text: string): FulfillmentStatus | null {
-    const replySection = text.split(/\n(?=>|On .+ wrote:|Den .+ skrev:|-----Original Message-----)/i)[0] ?? text;
+export function canCancelOrder(fulfillments: { status: FulfillmentStatus }[]): boolean {
+    if (fulfillments.length === 0) return false;
+    return fulfillments.every((entry) =>
+        CANCELLABLE_STATUSES.includes(entry.status as (typeof CANCELLABLE_STATUSES)[number]),
+    );
+}
 
-    const tokens = replySection
-        .toUpperCase()
-        .replace(/[^A-ZÆØÅ0-9_\s]/g, ' ')
-        .split(/\s+/)
-        .filter(Boolean);
+export function canUpdateFulfillmentStatus(current: FulfillmentStatus): boolean {
+    return !TERMINAL_STATUSES.includes(current as (typeof TERMINAL_STATUSES)[number]);
+}
 
-    for (const token of tokens) {
-        const status = STATUS_KEYWORDS[token];
-        if (status) {
-            return status;
-        }
+export function getNextStatuses(current: FulfillmentStatus): FulfillmentStatus[] {
+    switch (current) {
+        case 'pending':
+        case 'sent':
+            return ['confirmed', 'cancelled'];
+        case 'confirmed':
+            return ['in_production', 'cancelled'];
+        case 'in_production':
+            return ['shipped', 'cancelled'];
+        case 'shipped':
+            return ['delivered'];
+        default:
+            return [];
     }
-
-    return null;
 }
 
 export function getFulfillmentStatusLabel(status: FulfillmentStatus): string {
@@ -74,6 +67,23 @@ export function getFulfillmentStatusLabel(status: FulfillmentStatus): string {
             return 'Levert';
         case 'cancelled':
             return 'Kansellert';
+    }
+}
+
+export function getFulfillmentStatusActionLabel(status: FulfillmentStatus): string {
+    switch (status) {
+        case 'confirmed':
+            return 'Bekreft';
+        case 'in_production':
+            return 'Start produksjon';
+        case 'shipped':
+            return 'Send';
+        case 'delivered':
+            return 'Lever';
+        case 'cancelled':
+            return 'Kanseller';
+        default:
+            return getFulfillmentStatusLabel(status);
     }
 }
 

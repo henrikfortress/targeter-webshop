@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
+import type { PrintShopRecord } from '@/lib/queries/print-shops';
+
 export type AdminUser = {
     id: string;
     name: string;
@@ -19,7 +21,7 @@ export type AdminUser = {
     createdAt: Date | string;
 };
 
-export function UsersTable() {
+export function UsersTable({ printShops }: { printShops: PrintShopRecord[] }) {
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [total, setTotal] = useState(0);
     const [error, setError] = useState<string | null>(null);
@@ -159,7 +161,12 @@ export function UsersTable() {
                 </Table>
             </div>
 
-            <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} onSuccess={reloadUsers} />
+            <CreateUserDialog
+                open={createOpen}
+                onOpenChange={setCreateOpen}
+                onSuccess={reloadUsers}
+                printShops={printShops}
+            />
             <EditUserDialog
                 user={editingUser}
                 open={editingUser !== null}
@@ -167,6 +174,7 @@ export function UsersTable() {
                     if (!open) setEditingUser(null);
                 }}
                 onSuccess={reloadUsers}
+                printShops={printShops}
             />
             <DeleteUserDialog
                 user={deletingUser}

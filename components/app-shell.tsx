@@ -14,19 +14,20 @@ type AppShellProps = {
         email?: string | null;
     };
     isAdmin: boolean;
+    isPrintShop: boolean;
     printShops: PrintShopRecord[];
 };
 
-export function AppShell({ children, user, isAdmin, printShops }: AppShellProps) {
+export function AppShell({ children, user, isAdmin, isPrintShop, printShops }: AppShellProps) {
     return (
         <TooltipProvider>
             <CartProvider>
                 <SidebarProvider>
-                    <AppSidebar user={user} isAdmin={isAdmin} />
+                    <AppSidebar user={user} isAdmin={isAdmin} isPrintShop={isPrintShop} />
                     <SidebarInset>
                         <div className="flex flex-1 flex-col gap-6 p-6">{children}</div>
                     </SidebarInset>
-                    <OrderSheet printShops={printShops} />
+                    {!isPrintShop ? <OrderSheet printShops={printShops} /> : null}
                 </SidebarProvider>
             </CartProvider>
         </TooltipProvider>

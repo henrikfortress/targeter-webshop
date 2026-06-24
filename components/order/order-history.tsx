@@ -1,8 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CancelOrderDialog } from '@/components/order/cancel-order-dialog';
 import type { OrderWithItems } from '@/lib/queries/orders';
 import {
+    canCancelOrder,
     getFulfillmentStatusLabel,
     getFulfillmentStatusVariant,
     type FulfillmentStatus,
@@ -84,6 +86,7 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
             {orders.map((order) => {
                 const totalQuantity = getTotalQuantity(order.items);
                 const overallStatus = getOverallOrderStatus(order.fulfillments);
+                const isCancellable = canCancelOrder(order.fulfillments);
 
                 return (
                     <Card key={order.id}>
@@ -100,6 +103,7 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
                                     <Badge variant="outline">
                                         {totalQuantity} vare{totalQuantity === 1 ? '' : 'r'}
                                     </Badge>
+                                    {isCancellable ? <CancelOrderDialog orderId={order.id} /> : null}
                                 </div>
                             </div>
                         </CardHeader>

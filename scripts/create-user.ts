@@ -1,6 +1,9 @@
 import 'dotenv/config';
 
+import { eq } from 'drizzle-orm';
 import { auth } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { printShop, user } from '@/lib/db/schema';
 
 function parseArgs() {
     const args = process.argv.slice(2);
@@ -25,21 +28,35 @@ function parseArgs() {
 }
 
 async function main() {
-    const { email, password, name, role } = parseArgs();
+    const { email, password, name, role, printShopId } = parseArgs();
 
     if (!email || !password) {
         console.error(
-            'Usage: bun run create-user -- --email <email> --password <password> [--name <name>] [--role <role>]',
+            'Usage: bun run create-user -- --email <email> --password <password> [--name <name>] [--role <role>] [--print-shop-id <id>]',
         );
         process.exit(1);
     }
 
-    let userRole: 'user' | 'admin' | undefined;
+    let userRole: 'user' | 'admin' | 'print_shop' | undefined;
     if (role) {
-        if (role !== 'user' && role !== 'admin') {
-            throw new Error(`Invalid role "${role}". Must be "user" or "admin".`);
+        if (role !== 'user' && role !== 'admin' && role !== 'print_shop') {
+            throw new Error(`Invalid role "${role}". Must be "user", "admin", or "print_shop".`);
         }
         userRole = role;
+    }
+
+    if (userRole === 'print_shop' && !printShopId) {
+        throw new Error('print_shop role requires --print-shop-id');
+    }
+
+    if (printShopId) {
+        const shop = await db.query.printShop.findFirst({
+            where: eq(printShop.id, printShopId),
+        });
+
+        if (!shop) {
+            throw new Error(`Print shop "${printShopId}" not found`);
+        }
     }
 
     const result = await auth.api.createUser({
@@ -47,9 +64,13 @@ async function main() {
             email,
             password,
             name: name ?? email.split('@')[0] ?? email,
-            ...(userRole ? { role: userRole } : {}),
+            ...(userRole === 'print_shop' ? {} : userRole ? { role: userRole } : {}),
         },
     });
+
+    if (userRole === 'print_shop' && printShopId) {
+        await db.update(user).set({ role: 'print_shop', printShopId }).where(eq(user.id, result.user.id));
+    }
 
     console.log(`Created user ${result.user.email} (${result.user.id})`);
 }

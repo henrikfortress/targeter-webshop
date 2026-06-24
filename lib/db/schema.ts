@@ -13,6 +13,7 @@ export const user = pgTable('user', {
         .$onUpdate(() => /* @__PURE__ */ new Date())
         .notNull(),
     role: text('role').default('user'),
+    printShopId: text('print_shop_id').references(() => printShop.id),
     banned: boolean('banned').default(false),
     banReason: text('ban_reason'),
     banExpires: timestamp('ban_expires'),
@@ -78,9 +79,13 @@ export const verification = pgTable(
     (table) => [index('verification_identifier_idx').on(table.identifier)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ one, many }) => ({
     sessions: many(session),
     accounts: many(account),
+    printShop: one(printShop, {
+        fields: [user.printShopId],
+        references: [printShop.id],
+    }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -236,6 +241,7 @@ export const printShopRelations = relations(printShop, ({ many }) => ({
     orderItems: many(orderItem),
     orderFulfillments: many(orderFulfillment),
     productSizeStocks: many(productSizeStock),
+    users: many(user),
 }));
 
 export const orderRelations = relations(order, ({ one, many }) => ({

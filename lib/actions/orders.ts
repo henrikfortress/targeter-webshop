@@ -4,8 +4,10 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/actions/auth';
 import { sendFulfillmentEmail } from '@/lib/email/send-fulfillment-email';
+import { sendStatusUpdateEmail } from '@/lib/email/send-status-update-email';
 import { db } from '@/lib/db';
 import { order, orderFulfillment, orderItem, printShop, productSize, productSizeStock } from '@/lib/db/schema';
+import { canCancelOrder, type FulfillmentStatus } from '@/lib/order-fulfillment/status';
 
 export type OrderItemInput = {
     productId: string;
@@ -159,4 +161,98 @@ export async function submitOrder(input: SubmitOrderInput) {
     revalidatePath('/orders');
 
     return { success: true, orderId };
+}
+
+export async function cancelOrder(orderId: string) {
+    const session = await requireSession();
+
+    const orderRecord = await db.query.order.findFirst({
+        where: eq(order.id, orderId),
+        with: {
+            fulfillments: {
+                with: {
+                    printShop: true,
+                },
+            },
+            items: {
+                with: {
+                    product: true,
+                    productSize: true,
+                    printShop: true,
+                },
+            },
+        },
+    });
+
+    if (!orderRecord) {
+        return { error: 'Bestillingen ble ikke funnet' };
+    }
+
+    if (orderRecord.userId !== session.user.id) {
+        return { error: 'Ikke autorisert' };
+    }
+
+    const fulfillments = orderRecord.fulfillments.map((entry) => ({
+        status: entry.status as FulfillmentStatus,
+    }));
+
+    if (!canCancelOrder(fulfillments)) {
+        return { error: 'Bestillingen kan ikke kanselleres lenger' };
+    }
+
+    const updatedAt = new Date();
+
+    for (const fulfillment of orderRecord.fulfillments) {
+        const previousStatus = fulfillment.status as FulfillmentStatus;
+
+        await db.update(orderFulfillment).set({ status: 'cancelled' }).where(eq(orderFulfillment.id, fulfillment.id));
+
+        const shopItems = orderRecord.items
+            .filter((item) => item.printShopId === fulfillment.printShopId)
+            .map((item) => ({
+                productName: item.product.name,
+                size: item.productSize.size,
+                quantity: item.quantity,
+            }));
+
+        await sendStatusUpdateEmail({
+            fulfillmentId: fulfillment.id,
+            orderId: orderRecord.id,
+            previousStatus,
+            newStatus: 'cancelled',
+            printShopName: fulfillment.printShop.name,
+            printShopEmail: fulfillment.printShop.email,
+            userEmail: session.user.email,
+            userName: session.user.name,
+            items: shopItems,
+            updatedAt,
+        });
+    }
+
+    for (const item of orderRecord.items) {
+        const stockRecord = await db.query.productSizeStock.findFirst({
+            where: and(
+                eq(productSizeStock.productSizeId, item.productSizeId),
+                eq(productSizeStock.printShopId, item.printShopId),
+            ),
+        });
+
+        if (stockRecord) {
+            await db
+                .update(productSizeStock)
+                .set({ stock: stockRecord.stock + item.quantity })
+                .where(
+                    and(
+                        eq(productSizeStock.productSizeId, item.productSizeId),
+                        eq(productSizeStock.printShopId, item.printShopId),
+                    ),
+                );
+        }
+    }
+
+    revalidatePath('/orders');
+    revalidatePath('/print-shop/orders');
+    revalidatePath('/');
+
+    return { success: true };
 }

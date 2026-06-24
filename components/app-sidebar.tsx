@@ -23,6 +23,7 @@ type AppSidebarProps = {
         email?: string | null;
     };
     isAdmin: boolean;
+    isPrintShop: boolean;
 };
 
 const adminLinks = [
@@ -31,43 +32,70 @@ const adminLinks = [
     { title: 'Trykkeri', href: '/admin/fulfillment', icon: PrinterIcon },
 ] as const;
 
-export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
+const printShopLinks = [{ title: 'Bestillinger', href: '/print-shop/orders', icon: ClipboardListIcon }] as const;
+
+export function AppSidebar({ user, isAdmin, isPrintShop }: AppSidebarProps) {
     const pathname = usePathname();
 
     return (
         <Sidebar collapsible="none">
             <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
-                <Link href="/" className="block w-fit">
+                <Link href={isPrintShop ? '/print-shop/orders' : '/'} className="block w-fit">
                     <img src="/targeter.svg" alt="Targeter" className="h-6 w-auto" />
                 </Link>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Hjem">
-                                    <Link href="/">
-                                        <HomeIcon />
-                                        <span>Hjem</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    asChild
-                                    isActive={pathname === '/orders'}
-                                    tooltip="Bestillingshistorikk"
-                                >
-                                    <Link href="/orders">
-                                        <ClipboardListIcon />
-                                        <span>Bestillinger</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                {!isPrintShop ? (
+                    <SidebarGroup>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={pathname === '/'} tooltip="Hjem">
+                                        <Link href="/">
+                                            <HomeIcon />
+                                            <span>Hjem</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton
+                                        asChild
+                                        isActive={pathname === '/orders'}
+                                        tooltip="Bestillingshistorikk"
+                                    >
+                                        <Link href="/orders">
+                                            <ClipboardListIcon />
+                                            <span>Bestillinger</span>
+                                        </Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ) : null}
+                {isPrintShop ? (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Trykkeri</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {printShopLinks.map((item) => (
+                                    <SidebarMenuItem key={item.href}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={pathname === item.href}
+                                            tooltip={item.title}
+                                        >
+                                            <Link href={item.href}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ) : null}
                 {isAdmin ? (
                     <SidebarGroup>
                         <SidebarGroupLabel>Admin</SidebarGroupLabel>

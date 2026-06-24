@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getDefaultRouteForRole } from '@/lib/auth-utils';
 import { authClient } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,8 @@ export function LoginForm() {
             password,
         });
 
+        const session = await authClient.getSession();
+
         setIsLoading(false);
 
         if (signInError) {
@@ -32,7 +35,8 @@ export function LoginForm() {
             return;
         }
 
-        router.push('/');
+        const role = session.data?.user.role;
+        router.push(getDefaultRouteForRole(role));
         router.refresh();
     }
 

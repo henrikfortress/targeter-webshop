@@ -1,21 +1,23 @@
-import { buildFulfillmentRef } from '@/lib/order-fulfillment/status';
 import { getResendClient, resendFromEmail } from '@/lib/email/resend';
+import { buildFulfillmentRef, getFulfillmentStatusLabel, type FulfillmentStatus } from '@/lib/order-fulfillment/status';
 
-type FulfillmentEmailItem = {
+type StatusUpdateEmailItem = {
     productName: string;
     size: string;
     quantity: number;
 };
 
-type SendFulfillmentEmailInput = {
+type SendStatusUpdateEmailInput = {
     fulfillmentId: string;
     orderId: string;
+    previousStatus: FulfillmentStatus;
+    newStatus: FulfillmentStatus;
     printShopName: string;
     printShopEmail: string;
     userEmail: string;
     userName: string;
-    items: FulfillmentEmailItem[];
-    submittedAt: Date;
+    items: StatusUpdateEmailItem[];
+    updatedAt: Date;
 };
 
 function formatDate(date: Date) {
@@ -25,8 +27,11 @@ function formatDate(date: Date) {
     });
 }
 
-function buildFulfillmentEmailContent(input: SendFulfillmentEmailInput) {
+function buildStatusUpdateEmailContent(input: SendStatusUpdateEmailInput) {
     const fulfillmentRef = buildFulfillmentRef(input.fulfillmentId);
+    const previousLabel = getFulfillmentStatusLabel(input.previousStatus);
+    const newLabel = getFulfillmentStatusLabel(input.newStatus);
+
     const itemRows = input.items
         .map(
             (item) =>
@@ -36,14 +41,16 @@ function buildFulfillmentEmailContent(input: SendFulfillmentEmailInput) {
 
     const itemLines = input.items.map((item) => `- ${item.productName} (${item.size}) × ${item.quantity}`).join('\n');
 
-    const subject = `[Targeter] Ny bestilling ${fulfillmentRef}`;
+    const subject = `[Targeter] Status oppdatert: ${newLabel} — ${fulfillmentRef}`;
 
     const html = `
         <div style="font-family:sans-serif;color:#111827;max-width:640px;">
-            <h1 style="font-size:20px;margin-bottom:8px;">Ny bestilling til ${input.printShopName}</h1>
-            <p style="margin:0 0 16px;color:#4b5563;">Bestilling mottatt ${formatDate(input.submittedAt)} fra ${input.userName}.</p>
+            <h1 style="font-size:20px;margin-bottom:8px;">Bestillingsstatus oppdatert</h1>
+            <p style="margin:0 0 16px;color:#4b5563;">Status for bestilling hos ${input.printShopName} er endret ${formatDate(input.updatedAt)}.</p>
             <p style="margin:0 0 8px;"><strong>Referanse:</strong> <code>${fulfillmentRef}</code></p>
-            <p style="margin:0 0 16px;"><strong>Ordre-ID:</strong> ${input.orderId}</p>
+            <p style="margin:0 0 8px;"><strong>Ordre-ID:</strong> ${input.orderId}</p>
+            <p style="margin:0 0 8px;"><strong>Kunde:</strong> ${input.userName} (${input.userEmail})</p>
+            <p style="margin:0 0 16px;"><strong>Status:</strong> ${previousLabel} → <strong>${newLabel}</strong></p>
             <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
                 <thead>
                     <tr>
@@ -54,56 +61,52 @@ function buildFulfillmentEmailContent(input: SendFulfillmentEmailInput) {
                 </thead>
                 <tbody>${itemRows}</tbody>
             </table>
-            <p style="margin:0;color:#6b7280;font-size:14px;">Logg inn i webshoppen for å oppdatere status på bestillingen.</p>
         </div>
     `.trim();
 
     const text = [
-        `Ny bestilling til ${input.printShopName}`,
+        'Bestillingsstatus oppdatert',
         '',
         `Referanse: ${fulfillmentRef}`,
         `Ordre-ID: ${input.orderId}`,
-        `Bestilt av: ${input.userName} (${input.userEmail})`,
-        `Mottatt: ${formatDate(input.submittedAt)}`,
+        `Trykkeri: ${input.printShopName}`,
+        `Kunde: ${input.userName} (${input.userEmail})`,
+        `Status: ${previousLabel} → ${newLabel}`,
+        `Oppdatert: ${formatDate(input.updatedAt)}`,
         '',
         'Varer:',
         itemLines,
-        '',
-        'Logg inn i webshoppen for å oppdatere status på bestillingen.',
     ].join('\n');
 
-    return { subject, html, text, fulfillmentRef };
+    return { subject, html, text };
 }
 
-export async function sendFulfillmentEmail(input: SendFulfillmentEmailInput) {
+export async function sendStatusUpdateEmail(input: SendStatusUpdateEmailInput) {
     const resend = getResendClient();
 
     if (!resend) {
-        console.warn('[FULFILLMENT EMAIL] RESEND_API_KEY is not configured, skipping email send');
+        console.warn('[STATUS UPDATE EMAIL] RESEND_API_KEY is not configured, skipping email send');
         return { skipped: true as const };
     }
 
     if (!resendFromEmail) {
-        console.warn('[FULFILLMENT EMAIL] RESEND_FROM is not configured, skipping email send');
+        console.warn('[STATUS UPDATE EMAIL] RESEND_FROM is not configured, skipping email send');
         return { skipped: true as const };
     }
 
-    const { subject, html, text } = buildFulfillmentEmailContent(input);
+    const { subject, html, text } = buildStatusUpdateEmailContent(input);
 
     const { data, error } = await resend.emails.send({
         from: resendFromEmail,
-        to: [input.printShopEmail],
-        cc: [input.userEmail],
+        to: [input.userEmail],
+        cc: [input.printShopEmail],
         subject,
         html,
         text,
-        headers: {
-            'X-Fulfillment-Ref': buildFulfillmentRef(input.fulfillmentId),
-        },
     });
 
     if (error) {
-        console.error('[FULFILLMENT EMAIL] Failed to send', error);
+        console.error('[STATUS UPDATE EMAIL] Failed to send', error);
         return { error: error.message };
     }
 

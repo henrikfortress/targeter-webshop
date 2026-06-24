@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { hasAdminRole } from '@/lib/auth-utils';
+import { getDefaultRouteForRole, hasAdminRole, hasPrintShopRole } from '@/lib/auth-utils';
 
 const loginPath = '/login';
 
@@ -17,7 +17,19 @@ export async function proxy(request: NextRequest) {
         }
 
         if (!hasAdminRole(session.user.role)) {
-            return NextResponse.redirect(new URL('/', request.url));
+            return NextResponse.redirect(new URL(getDefaultRouteForRole(session.user.role), request.url));
+        }
+
+        return NextResponse.next();
+    }
+
+    if (pathname.startsWith('/print-shop')) {
+        if (!session) {
+            return NextResponse.redirect(new URL(loginPath, request.url));
+        }
+
+        if (!hasPrintShopRole(session.user.role)) {
+            return NextResponse.redirect(new URL(getDefaultRouteForRole(session.user.role), request.url));
         }
 
         return NextResponse.next();
@@ -25,7 +37,7 @@ export async function proxy(request: NextRequest) {
 
     if (pathname === loginPath) {
         if (session) {
-            return NextResponse.redirect(new URL('/', request.url));
+            return NextResponse.redirect(new URL(getDefaultRouteForRole(session.user.role), request.url));
         }
 
         return NextResponse.next();
@@ -36,6 +48,10 @@ export async function proxy(request: NextRequest) {
             return NextResponse.redirect(new URL(loginPath, request.url));
         }
 
+        if (hasPrintShopRole(session.user.role) && !hasAdminRole(session.user.role)) {
+            return NextResponse.redirect(new URL('/print-shop/orders', request.url));
+        }
+
         return NextResponse.next();
     }
 
@@ -43,5 +59,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/', '/orders', '/login', '/admin/:path*'],
+    matcher: ['/', '/orders', '/login', '/admin/:path*', '/print-shop/:path*'],
 };

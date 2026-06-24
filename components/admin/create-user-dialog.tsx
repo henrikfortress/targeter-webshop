@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { authClient } from '@/lib/auth-client';
+import { createUser, getUserPrintShopId, setUserPrintShop } from '@/lib/actions/users';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,23 +14,29 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { PrintShopRecord } from '@/lib/queries/print-shops';
 
 type CreateUserDialogProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess: () => void;
+    printShops: PrintShopRecord[];
 };
 
 const roles = [
     { value: 'user', label: 'Bruker' },
     { value: 'admin', label: 'Admin' },
+    { value: 'print_shop', label: 'Trykkeri' },
 ] as const;
 
-export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDialogProps) {
+type RoleValue = (typeof roles)[number]['value'];
+
+export function CreateUserDialog({ open, onOpenChange, onSuccess, printShops }: CreateUserDialogProps) {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState<(typeof roles)[number]['value']>('user');
+    const [role, setRole] = useState<RoleValue>('user');
+    const [printShopId, setPrintShopId] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -39,6 +45,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
         setEmail('');
         setPassword('');
         setRole('user');
+        setPrintShopId('');
         setError(null);
     }
 
@@ -52,19 +59,26 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
+
+        if (role === 'print_shop' && !printShopId) {
+            setError('Velg trykkeri for trykkeri-brukeren');
+            return;
+        }
+
         setIsLoading(true);
 
-        const { error: createError } = await authClient.admin.createUser({
+        const result = await createUser({
             email,
             password,
             name,
             role,
+            printShopId: role === 'print_shop' ? printShopId : null,
         });
 
         setIsLoading(false);
 
-        if (createError) {
-            setError(createError.message ?? 'Kunne ikke opprette bruker');
+        if ('error' in result && result.error) {
+            setError(result.error);
             return;
         }
 
@@ -116,7 +130,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="create-role">Rolle</Label>
-                        <Select value={role} onValueChange={(value) => setRole(value as typeof role)}>
+                        <Select value={role} onValueChange={(value) => setRole(value as RoleValue)}>
                             <SelectTrigger id="create-role" className="w-full">
                                 <SelectValue />
                             </SelectTrigger>
@@ -129,6 +143,23 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
                             </SelectContent>
                         </Select>
                     </div>
+                    {role === 'print_shop' ? (
+                        <div className="space-y-2">
+                            <Label htmlFor="create-print-shop">Trykkeri</Label>
+                            <Select value={printShopId} onValueChange={setPrintShopId}>
+                                <SelectTrigger id="create-print-shop" className="w-full">
+                                    <SelectValue placeholder="Velg trykkeri" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {printShops.map((shop) => (
+                                        <SelectItem key={shop.id} value={shop.id}>
+                                            {shop.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    ) : null}
                     {error ? <p className="text-sm text-destructive">{error}</p> : null}
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
