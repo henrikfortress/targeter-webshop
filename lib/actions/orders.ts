@@ -3,8 +3,9 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/actions/auth';
+import { sendFulfillmentEmail } from '@/lib/email/send-fulfillment-email';
 import { db } from '@/lib/db';
-import { order, orderItem, printShop, productSize, productSizeStock } from '@/lib/db/schema';
+import { order, orderFulfillment, orderItem, printShop, productSize, productSizeStock } from '@/lib/db/schema';
 
 export type OrderItemInput = {
     productId: string;
@@ -74,22 +75,40 @@ export async function submitOrder(input: SubmitOrderInput) {
     }
 
     const orderId = crypto.randomUUID();
+    const submittedAt = new Date();
 
     await db.insert(order).values({
         id: orderId,
         userId: session.user.id,
     });
 
-    await db.insert(orderItem).values(
-        input.items.map((item) => ({
-            id: crypto.randomUUID(),
-            orderId,
-            productId: item.productId,
-            productSizeId: item.productSizeId,
-            printShopId: item.printShopId,
-            quantity: item.quantity,
-        })),
-    );
+    const insertedItems = input.items.map((item) => ({
+        id: crypto.randomUUID(),
+        orderId,
+        productId: item.productId,
+        productSizeId: item.productSizeId,
+        printShopId: item.printShopId,
+        quantity: item.quantity,
+    }));
+
+    await db.insert(orderItem).values(insertedItems);
+
+    const itemsByPrintShop = new Map<string, typeof input.items>();
+
+    for (const item of input.items) {
+        const existing = itemsByPrintShop.get(item.printShopId) ?? [];
+        existing.push(item);
+        itemsByPrintShop.set(item.printShopId, existing);
+    }
+
+    const fulfillmentRecords = [...itemsByPrintShop.entries()].map(([printShopId]) => ({
+        id: crypto.randomUUID(),
+        orderId,
+        printShopId,
+        status: 'pending' as const,
+    }));
+
+    await db.insert(orderFulfillment).values(fulfillmentRecords);
 
     for (const item of input.items) {
         const sizeRecord = sizeMap.get(item.productSizeId)!;
@@ -106,20 +125,35 @@ export async function submitOrder(input: SubmitOrderInput) {
             );
     }
 
-    const orderPayload = {
-        orderId,
-        userId: session.user.id,
-        userEmail: session.user.email,
-        items: input.items.map((item) => ({
-            product: item.productName,
-            size: item.size,
-            quantity: item.quantity,
-            printShop: shopMap.get(item.printShopId)?.name,
-        })),
-        submittedAt: new Date().toISOString(),
-    };
+    for (const fulfillment of fulfillmentRecords) {
+        const shop = shopMap.get(fulfillment.printShopId)!;
+        const shopItems = itemsByPrintShop.get(fulfillment.printShopId)!;
 
-    console.log('[ORDER SUBMITTED]', JSON.stringify(orderPayload, null, 2));
+        const emailResult = await sendFulfillmentEmail({
+            fulfillmentId: fulfillment.id,
+            orderId,
+            printShopName: shop.name,
+            printShopEmail: shop.email,
+            userEmail: session.user.email,
+            userName: session.user.name,
+            items: shopItems.map((item) => ({
+                productName: item.productName,
+                size: item.size,
+                quantity: item.quantity,
+            })),
+            submittedAt,
+        });
+
+        if ('success' in emailResult && emailResult.success) {
+            await db
+                .update(orderFulfillment)
+                .set({
+                    status: 'sent',
+                    resendEmailId: emailResult.emailId ?? null,
+                })
+                .where(eq(orderFulfillment.id, fulfillment.id));
+        }
+    }
 
     revalidatePath('/');
     revalidatePath('/orders');

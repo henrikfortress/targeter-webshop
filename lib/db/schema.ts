@@ -185,6 +185,30 @@ export const orderItem = pgTable(
     (table) => [index('order_item_orderId_idx').on(table.orderId)],
 );
 
+export const orderFulfillment = pgTable(
+    'order_fulfillment',
+    {
+        id: text('id').primaryKey(),
+        orderId: text('order_id')
+            .notNull()
+            .references(() => order.id, { onDelete: 'cascade' }),
+        printShopId: text('print_shop_id')
+            .notNull()
+            .references(() => printShop.id),
+        status: text('status').default('pending').notNull(),
+        resendEmailId: text('resend_email_id'),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+        updatedAt: timestamp('updated_at')
+            .defaultNow()
+            .$onUpdate(() => new Date())
+            .notNull(),
+    },
+    (table) => [
+        index('order_fulfillment_orderId_idx').on(table.orderId),
+        uniqueIndex('order_fulfillment_order_print_shop_uidx').on(table.orderId, table.printShopId),
+    ],
+);
+
 export const productRelations = relations(product, ({ many }) => ({
     sizes: many(productSize),
 }));
@@ -210,6 +234,7 @@ export const productSizeStockRelations = relations(productSizeStock, ({ one }) =
 
 export const printShopRelations = relations(printShop, ({ many }) => ({
     orderItems: many(orderItem),
+    orderFulfillments: many(orderFulfillment),
     productSizeStocks: many(productSizeStock),
 }));
 
@@ -219,6 +244,18 @@ export const orderRelations = relations(order, ({ one, many }) => ({
         references: [user.id],
     }),
     items: many(orderItem),
+    fulfillments: many(orderFulfillment),
+}));
+
+export const orderFulfillmentRelations = relations(orderFulfillment, ({ one }) => ({
+    order: one(order, {
+        fields: [orderFulfillment.orderId],
+        references: [order.id],
+    }),
+    printShop: one(printShop, {
+        fields: [orderFulfillment.printShopId],
+        references: [printShop.id],
+    }),
 }));
 
 export const orderItemRelations = relations(orderItem, ({ one }) => ({
