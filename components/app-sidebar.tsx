@@ -35,7 +35,7 @@ export function AppSidebar({ user, isAdmin }: AppSidebarProps) {
     const pathname = usePathname();
 
     return (
-        <Sidebar collapsible="none" className="h-svh shrink-0">
+        <Sidebar collapsible="none">
             <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
                 <Link href="/" className="block w-fit">
                     <img src="/targeter.svg" alt="Targeter" className="h-6 w-auto" />

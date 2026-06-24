@@ -21,7 +21,7 @@ export function AppShell({ children, user, isAdmin, printShops }: AppShellProps)
     return (
         <TooltipProvider>
             <CartProvider>
-                <SidebarProvider className="min-h-svh h-svh">
+                <SidebarProvider>
                     <AppSidebar user={user} isAdmin={isAdmin} />
                     <SidebarInset>
                         <div className="flex flex-1 flex-col gap-6 p-6">{children}</div>
