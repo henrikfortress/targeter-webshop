@@ -72,7 +72,7 @@ Webshopen byr på tre ulike roller.
 
 ## Datamodell
 
-Schema definert i lib/db/schema.ts, oversikt:
+Schema definert i [lib/db/schema.ts](lib/db/schema.ts), oversikt:
 
 - Auth: user, session, account, verification
 - Katalog: product, product_size, product_size_stock (lager per trykkeri)
@@ -82,7 +82,7 @@ Schema definert i lib/db/schema.ts, oversikt:
 
 ## Ordersyklus
 
-Statuser er definert i lib/order-fulfillment/status.ts, og ser slik ut:
+Statuser er definert i [lib/order-fulfillment/status.ts](lib/order-fulfillment/status.ts), og ser slik ut:
 
 ```
 pending → sent → confirmed → in_production → shipped → delivered
