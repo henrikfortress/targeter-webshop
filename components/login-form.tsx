@@ -77,6 +77,11 @@ export function LoginForm() {
                         {isLoading ? 'Signing in...' : 'Sign in'}
                     </Button>
                 </form>
+                <p className="mt-6 text-center text-xs text-muted-foreground">
+                    <a href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+                        Personvernerklæring
+                    </a>
+                </p>
             </CardContent>
         </Card>
     );
