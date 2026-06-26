@@ -28,12 +28,16 @@ Når du har fått tilgang, navigerer du til siden og skriver inn e-post og passo
 - Når du er fornøyd med bestillingen trykker du på "Send bestilling"
 - Du vil få en godkjennelse med referansenummer når bestillingen går gjennom
 
+![Produkter](../public/screenshots/products.png)
+
 ### Se og følge bestillinger
 
 - Naviger til **Bestillinger**-siden
 - Aktive og eldre bestillinger vises
 - Se status per bestilling, samt per leveranse dersom det er flere trykkerier som leverer bestillinger (se **Statuser** lenger ned)
 - Oppdatering på bestillinger kommer også per e-post
+
+![Bestillinger](../public/screenshots/orders.png)
 
 ### Kansellere bestilling
 
@@ -70,17 +74,23 @@ Når du har fått tilgang, navigerer du til siden og skriver inn e-post og passo
 - Dersom bruker skal administrere et trykkeri, velg "Trykkeri" under rolle og velg trykkeriet fra listen under
 - Endre eller fjern brukere fra listen ved å trykke på blyanten eller søppelbøtten
 
+![Opprett bruker](../public/screenshots/create-user.png)
+
 ### Produkter og lager
 
 - Opprett produkter (ha med navn, beskrivelse, ønskelige størrelser og eventuelle lagerføringer per trykkeri)
 - Endre produkter ved å trykke på blyanten. Her kan du overstyre lagerstatus eller aktivere/deaktivere produkter
 - Deaktiverte produkter vises ikke på hjemskjermen og kan ikke bestilles av kunder. De forblir i eventuelle bestillinger som allerede er sendt
 
+![Rediger produkt](../public/screenshots/edit-product.png)
+
 ### Trykkerier
 
 - Registrer trykkerier (ha med navn og e-post)
 - Endre eller fjern trykkerier fra listen ved å trykke på blyanten eller søppelbøtten
 - Deaktiverte trykkerier vises ikke som valg i listen på produkter. Eventuelle bestillinger og tilganger til trykkeriet forblir
+
+![Nytt trykkeri](../public/screenshots/create-print-shop.png)
 
 ## Support
 
