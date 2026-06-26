@@ -32,7 +32,10 @@ const adminLinks = [
     { title: 'Trykkeri', href: '/admin/fulfillment', icon: PrinterIcon },
 ] as const;
 
-const printShopLinks = [{ title: 'Bestillinger', href: '/print-shop/orders', icon: ClipboardListIcon }] as const;
+const printShopLinks = [
+    { title: 'Bestillinger', href: '/print-shop/orders', icon: ClipboardListIcon },
+    { title: 'Produkter', href: '/print-shop/products', icon: PackageIcon },
+] as const;
 
 export function AppSidebar({ user, isAdmin, isPrintShop }: AppSidebarProps) {
     const pathname = usePathname();
