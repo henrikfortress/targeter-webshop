@@ -12,7 +12,7 @@ For å sette i gang trenger du en innlogging. Dette styres av Fortress Digital A
 
 Når du har fått tilgang, navigerer du til siden og skriver inn e-post og passord.
 
-![Login](public/screenshots/login.png)
+![Login](../public/screenshots/login.png)
 
 ## For kunder
 
