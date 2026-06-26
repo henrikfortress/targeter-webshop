@@ -147,3 +147,4 @@ Følgende er logger fra utviklingen:
 - [Dag 1](docs/logs/dag-1.md)
 - [Dag 2](docs/logs/dag-2.md)
 - [Dag 3](docs/logs/dag-3.md)
+- [Dag 4](docs/logs/dag-4.md)
