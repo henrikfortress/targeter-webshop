@@ -1,7 +1,9 @@
-08:00 - Begynner utforming av brukerveiledning.
+# Logg - Dag 5
 
-10:25 - Fullføre brukerveiledning, begynner på personvernsdokumentasjon
+- **08:00** - Begynner utforming av brukerveiledning.
 
-12:00 - Lunsj
+- **10:25** - Fullføre brukerveiledning, begynner på personvernsdokumentasjon
 
-14:35 - Fullføre personverndsok. som egen underside, tilgjengelig på https://webshop.targeter.tech/privacy
+- **12:00** - Lunsj
+
+- **14:35** - Fullføre personverndsok. som egen underside, tilgjengelig på https://webshop.targeter.tech/privacy
